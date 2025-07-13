@@ -26,7 +26,7 @@ public class TikTokBusinessEventListener : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if (Input.GetMouseButtonUp(0))
+        if (IsPointerUp())
         {
             if (_clickInfos != null)
             {
@@ -41,7 +41,7 @@ public class TikTokBusinessEventListener : MonoBehaviour
             }
         }
         
-        if (Input.GetMouseButtonDown(0))
+        if (IsPointerDown())
         {
             if (!TikTokInnerManager.Instance().ShouldReportClickEvent())
             {
@@ -140,6 +140,32 @@ public class TikTokBusinessEventListener : MonoBehaviour
             _clickInfos = info;
 
         }
+    }
+
+    private bool IsPointerUp()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (UnityEngine.InputSystem.Touchscreen.current != null)
+            if (UnityEngine.InputSystem.Touchscreen.current.primaryTouch.phase.ReadValue() == UnityEngine.InputSystem.TouchPhase.Ended)
+                return true;
+
+        return false;
+#else
+        return Input.GetMouseButtonUp(0);
+#endif
+    }
+
+    private bool IsPointerDown()
+    {
+#if ENABLE_INPUT_SYSTEM
+        if (UnityEngine.InputSystem.Touchscreen.current != null)
+            if (UnityEngine.InputSystem.Touchscreen.current.primaryTouch.phase.ReadValue() == UnityEngine.InputSystem.TouchPhase.Ended)
+                return true;
+
+        return false;
+#else
+        return Input.GetMouseButtonDown(0);
+#endif
     }
 
     Dictionary<string,object> CurrentUIInfo(Transform currentTransform, string parentName, long currentLevel, long targetLevel)
