@@ -1,0 +1,13 @@
+{
+  "name": "tiktok.business.sdk.unity",
+  "displayName": "Tik Tok Business SDK for Unity",
+  "version": "1.4.1",
+  "unity": "2021.1",
+  "author": {
+    "name": "Max Ksenzheuski",
+    "email": "frixqn@gmail.com"
+  },
+  "dependencies": {
+    "com.unity.nuget.newtonsoft-json": "3.2.1"
+  }
+}
