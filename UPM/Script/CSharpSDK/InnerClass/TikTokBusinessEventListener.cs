@@ -32,15 +32,14 @@ public class TikTokBusinessEventListener : MonoBehaviour
             {
                 _endTime = Time.time;
                 var clickDuration = (long)((_endTime - _startTime) * 1000);
-                _clickInfos.Add("click_duration",clickDuration);
-                _clickInfos.Add("platform","unity");
-                _clickInfos.Add("monitor_type","enhanced_data_postback");
-                TikTokBusinessSDK.TrackTTEvent(new TikTokBaseEvent("click",_clickInfos,""));
+                _clickInfos.Add("click_duration", clickDuration);
+                _clickInfos.Add("platform", "unity");
+                _clickInfos.Add("monitor_type", "enhanced_data_postback");
+                TikTokBusinessSDK.TrackTTEvent(new TikTokBaseEvent("click", _clickInfos, ""));
                 TikTokLogger.Verbose("Unity edp click");
-
             }
         }
-        
+
         if (IsPointerDown())
         {
             if (!TikTokInnerManager.Instance().ShouldReportClickEvent())
@@ -52,29 +51,62 @@ public class TikTokBusinessEventListener : MonoBehaviour
             _startTime = Time.time;
 
             var eventSystem = EventSystem.current;
-
             if (eventSystem == null)
             {
                 return;
             }
-            
-            if (_fieldInfo == null)
+
+            GameObject go = null;
+            Vector2 pointerPos = Vector2.zero;
+
+#if ENABLE_INPUT_SYSTEM
+            if (UnityEngine.InputSystem.Pointer.current != null)
             {
-                _fieldInfo = typeof(StandaloneInputModule).GetField("m_InputPointerEvent", BindingFlags.NonPublic | BindingFlags.Instance);
+                pointerPos = UnityEngine.InputSystem.Pointer.current.position.ReadValue();
+
+                List<RaycastResult> raycastResults = new List<RaycastResult>();
+                PointerEventData eventData = new PointerEventData(eventSystem)
+                {
+                    position = pointerPos
+                };
+                eventSystem.RaycastAll(eventData, raycastResults);
+                if (raycastResults.Count > 0)
+                    go = raycastResults[0].gameObject;
             }
+#endif
 
-            var pointerEventData = _fieldInfo?.GetValue(eventSystem.currentInputModule) as PointerEventData;
+            if (go == null)
+            {
+                pointerPos = Input.mousePosition;
 
-            if (pointerEventData == null)
-                return;
-            
-            var go = pointerEventData.pointerEnter;
+                if (_fieldInfo == null)
+                {
+                    _fieldInfo = typeof(StandaloneInputModule).GetField("m_InputPointerEvent", BindingFlags.NonPublic | BindingFlags.Instance);
+                }
+
+                var pointerEventData = _fieldInfo?.GetValue(eventSystem.currentInputModule) as PointerEventData;
+                if (pointerEventData != null)
+                {
+                    go = pointerEventData.pointerEnter;
+                }
+                else
+                {
+                    List<RaycastResult> raycastResults = new List<RaycastResult>();
+                    PointerEventData eventData = new PointerEventData(eventSystem)
+                    {
+                        position = pointerPos
+                    };
+                    eventSystem.RaycastAll(eventData, raycastResults);
+                    if (raycastResults.Count > 0)
+                        go = raycastResults[0].gameObject;
+                }
+            }
 
             if (go == null)
             {
                 return;
             }
-            
+
             var goTransform = go.transform;
             if (TikTokInnerManager.Instance().IsButtonInBlackList(go.transform.name))
             {
@@ -83,6 +115,7 @@ public class TikTokBusinessEventListener : MonoBehaviour
             }
 
             var deepCount = 0;
+            _baseTransform = null;
             while (goTransform != null)
             {
                 deepCount += 1;
@@ -92,34 +125,30 @@ public class TikTokBusinessEventListener : MonoBehaviour
                 }
                 goTransform = goTransform.parent;
             }
-            
-            Dictionary<string, object> info = new Dictionary<string, object>();
-            info.Add("class_name",go.transform.name);
-            var result = CurrentUIInfo(_baseTransform, _baseTransform.name,1,TikTokInnerManager.Instance().PageDeepCount());
-            
-            info.Add("page_components",result);  
-            info.Add("current_page_name", _baseTransform.name);  
-            info.Add("page_deep_count",deepCount);  
 
-            Vector3 hitPosition = Input.mousePosition;
-            info.Add("click_position_x",hitPosition.x);
-            info.Add("click_position_y",(Screen.height - hitPosition.y));     
-            
+            Dictionary<string, object> info = new Dictionary<string, object>();
+            info.Add("class_name", go.transform.name);
+            var result = CurrentUIInfo(_baseTransform, _baseTransform.name, 1, TikTokInnerManager.Instance().PageDeepCount());
+
+            info.Add("page_components", result);
+            info.Add("current_page_name", _baseTransform.name);
+            info.Add("page_deep_count", deepCount);
+
+            info.Add("click_position_x", pointerPos.x);
+            info.Add("click_position_y", (Screen.height - pointerPos.y));
+
             if (go != null)
             {
                 float screenWidth = Screen.width;
                 float screenHeight = Screen.height;
                 var currentObject = go;
                 RectTransform currentObjectTransform = currentObject.GetComponent<RectTransform>();
-                // 如果当前对象没有宽高信息，直接过滤
                 if (currentObjectTransform == null) return;
-                // 如果点击的是背景，直接过滤
                 if (!(currentObjectTransform.rect.width < screenWidth ||
                       currentObjectTransform.rect.height < screenHeight)) return;
-                
-                if (currentObject.GetComponent<Text>() != null|| currentObject.GetComponent<Image>() != null)
+
+                if (currentObject.GetComponent<Text>() != null || currentObject.GetComponent<Image>() != null)
                 {
-                    // 如果是 Text 或 Image 尝试获取父对象获取完整信息
                     var parentObject = currentObject.transform.parent.gameObject;
                     RectTransform parentObjectTransform = parentObject.GetComponent<RectTransform>();
                     if (currentObjectTransform != null)
@@ -133,12 +162,11 @@ public class TikTokBusinessEventListener : MonoBehaviour
                     }
                 }
                 _currentClickTransform = go.transform;
-                var clickComponent = CurrentUIInfo(currentObjectTransform, currentObjectTransform.name,1,TikTokInnerManager.Instance().PageDeepCount());
-                info.Add("click_component",clickComponent);
+                var clickComponent = CurrentUIInfo(currentObjectTransform, currentObjectTransform.name, 1, TikTokInnerManager.Instance().PageDeepCount());
+                info.Add("click_component", clickComponent);
             }
-            
-            _clickInfos = info;
 
+            _clickInfos = info;
         }
     }
 
@@ -147,11 +175,15 @@ public class TikTokBusinessEventListener : MonoBehaviour
 #if ENABLE_INPUT_SYSTEM
         if (UnityEngine.InputSystem.Touchscreen.current != null)
             if (UnityEngine.InputSystem.Touchscreen.current.primaryTouch.phase.ReadValue() == UnityEngine.InputSystem.TouchPhase.Ended)
+
+                return true;
+        if (UnityEngine.InputSystem.Mouse.current != null)
+            if (UnityEngine.InputSystem.Mouse.current.leftButton.wasReleasedThisFrame)
                 return true;
 
         return false;
 #else
-        return Input.GetMouseButtonUp(0);
+    return Input.GetMouseButtonUp(0);
 #endif
     }
 
@@ -159,12 +191,16 @@ public class TikTokBusinessEventListener : MonoBehaviour
     {
 #if ENABLE_INPUT_SYSTEM
         if (UnityEngine.InputSystem.Touchscreen.current != null)
-            if (UnityEngine.InputSystem.Touchscreen.current.primaryTouch.phase.ReadValue() == UnityEngine.InputSystem.TouchPhase.Ended)
+            if (UnityEngine.InputSystem.Touchscreen.current.primaryTouch.phase.ReadValue() == UnityEngine.InputSystem.TouchPhase.Began)
+                return true;
+
+        if (UnityEngine.InputSystem.Mouse.current != null)
+            if (UnityEngine.InputSystem.Mouse.current.leftButton.wasPressedThisFrame)
                 return true;
 
         return false;
 #else
-        return Input.GetMouseButtonDown(0);
+    return Input.GetMouseButtonDown(0);
 #endif
     }
 
