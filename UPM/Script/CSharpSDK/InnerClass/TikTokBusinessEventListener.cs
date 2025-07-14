@@ -32,9 +32,9 @@ public class TikTokBusinessEventListener : MonoBehaviour
             {
                 _endTime = Time.time;
                 var clickDuration = (long)((_endTime - _startTime) * 1000);
-                _clickInfos.Add("click_duration", clickDuration);
-                _clickInfos.Add("platform", "unity");
-                _clickInfos.Add("monitor_type", "enhanced_data_postback");
+                _clickInfos.TryAdd("click_duration", clickDuration);
+                _clickInfos.TryAdd("platform", "unity");
+                _clickInfos.TryAdd("monitor_type", "enhanced_data_postback");
                 TikTokBusinessSDK.TrackTTEvent(new TikTokBaseEvent("click", _clickInfos, ""));
                 TikTokLogger.Verbose("Unity edp click");
             }
