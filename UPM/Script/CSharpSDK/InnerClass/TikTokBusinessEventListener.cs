@@ -64,6 +64,30 @@ public class TikTokBusinessEventListener : MonoBehaviour
             {
                 pointerPos = UnityEngine.InputSystem.Pointer.current.position.ReadValue();
 
+                List<RaycastResult> raycastResults = new ();
+                PointerEventData eventData = new (eventSystem)
+                {
+                    position = pointerPos
+                };
+                eventSystem.RaycastAll(eventData, raycastResults);
+                if (raycastResults.Count > 0)
+                    go = raycastResults[0].gameObject;
+            }
+#else
+            pointerPos = Input.mousePosition;
+
+            if (_fieldInfo == null)
+            {
+                _fieldInfo = typeof(StandaloneInputModule).GetField("m_InputPointerEvent", BindingFlags.NonPublic | BindingFlags.Instance);
+            }
+
+            var pointerEventData = _fieldInfo?.GetValue(eventSystem.currentInputModule) as PointerEventData;
+            if (pointerEventData != null)
+            {
+                go = pointerEventData.pointerEnter;
+            }
+            else
+            {
                 List<RaycastResult> raycastResults = new List<RaycastResult>();
                 PointerEventData eventData = new PointerEventData(eventSystem)
                 {
@@ -74,34 +98,6 @@ public class TikTokBusinessEventListener : MonoBehaviour
                     go = raycastResults[0].gameObject;
             }
 #endif
-
-            if (go == null)
-            {
-                pointerPos = Input.mousePosition;
-
-                if (_fieldInfo == null)
-                {
-                    _fieldInfo = typeof(StandaloneInputModule).GetField("m_InputPointerEvent", BindingFlags.NonPublic | BindingFlags.Instance);
-                }
-
-                var pointerEventData = _fieldInfo?.GetValue(eventSystem.currentInputModule) as PointerEventData;
-                if (pointerEventData != null)
-                {
-                    go = pointerEventData.pointerEnter;
-                }
-                else
-                {
-                    List<RaycastResult> raycastResults = new List<RaycastResult>();
-                    PointerEventData eventData = new PointerEventData(eventSystem)
-                    {
-                        position = pointerPos
-                    };
-                    eventSystem.RaycastAll(eventData, raycastResults);
-                    if (raycastResults.Count > 0)
-                        go = raycastResults[0].gameObject;
-                }
-            }
-
             if (go == null)
             {
                 return;
