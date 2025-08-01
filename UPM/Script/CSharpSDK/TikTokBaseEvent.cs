@@ -23,7 +23,7 @@ namespace SDK
             {
                 tempDict = new Dictionary<string, object>();
             }
-            tempDict.Add("api_platform",platformInfo);
+            tempDict.TryAdd("api_platform",platformInfo);
             EventParams.Add("properties",JsonConvert.SerializeObject(tempDict));
 
         }
